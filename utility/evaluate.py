@@ -7,6 +7,8 @@ import multiprocessing
 import heapq
 from time import time
 
+import functools
+
 cores = multiprocessing.cpu_count() // 2
 
 args = parse_args()
@@ -77,7 +79,7 @@ def get_performance(user_pos_test, r, auc, Ks):
     return {'recall': np.array(recall),'ndcg': np.array(ndcg)}
 
 
-def test_one_user(x):
+def test_one_user(x, train_user_set, test_user_set, n_items):
     # user u's ratings for user u
     rating = x[0]
     # uid
@@ -161,7 +163,11 @@ def test(model, user_dict, n_params):
             rate_batch = model.rating(u_g_embeddings, i_g_embddings).detach().cpu()
 
         user_batch_rating_uid = zip(rate_batch, user_list_batch)
-        batch_result = pool.map(test_one_user, user_batch_rating_uid)
+        mp_test_one_user = functools.partial(test_one_user,
+                                             train_user_set=train_user_set,
+                                             test_user_set=test_user_set,
+                                             n_items=n_items)
+        batch_result = pool.map(mp_test_one_user, user_batch_rating_uid)
         count += len(batch_result)
 
         for re in batch_result:
