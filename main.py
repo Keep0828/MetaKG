@@ -172,7 +172,7 @@ if __name__ == '__main__':
         moving_avg_reward = 0
 
         model.train()
-        iter_num = math.ceil(len(support_meta_set) / args.batch_size)
+        iter_num = math.floor(len(support_meta_set) / args.batch_size)
         train_s_t = time()
         for s in tqdm(range(iter_num)):
             batch_support = torch.LongTensor(support_meta_set[s * args.batch_size:(s + 1) * args.batch_size]).to(device)
