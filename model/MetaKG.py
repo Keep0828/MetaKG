@@ -193,8 +193,8 @@ class Recommender(nn.Module):
         self.node_dropout_rate = args_config.node_dropout_rate
         self.mess_dropout = args_config.mess_dropout
         self.mess_dropout_rate = args_config.mess_dropout_rate
-        self.device = torch.device("cuda:" + str(args_config.gpu_id)) if args_config.cuda \
-                                                                      else torch.device("cpu")
+        self.device = torch.device("cuda:" + str(args_config.gpu_id)) if args_config.cuda and torch.cuda.is_available() \
+            else torch.device("cpu")
 
         self.edge_index, self.edge_type = self._get_edges(graph)
         self._init_weight()

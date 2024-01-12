@@ -14,6 +14,8 @@ from utility.scheduler import Scheduler
 from collections import OrderedDict
 from tqdm import tqdm
 
+torch.autograd.set_detect_anomaly(True)
+
 n_users = 0
 n_items = 0
 n_entities = 0
@@ -104,7 +106,9 @@ if __name__ == '__main__':
     """read args"""
     global args, device
     args = parse_args()
-    device = torch.device("cuda:" + str(args.gpu_id)) if args.cuda else torch.device("cpu")
+    device = torch.device("cuda:" + str(args.gpu_id)) if args.cuda and torch.cuda.is_available() else torch.device(
+        "cpu")
+    print("device: ", device)
 
     """build dataset"""
     cold_scenario = args.cold_scenario  # the cold scenario adapted
@@ -125,7 +129,7 @@ if __name__ == '__main__':
     # test_cf_pairs = torch.LongTensor(np.array([[cf[0], cf[1]] for cf in test_cf], np.int32))
     cold_train_cf_pairs = torch.LongTensor(np.array([[cf[0], cf[1]] for cf in cold_train_cf], np.int32))
     # cold_test_cf_pairs = torch.LongTensor(np.array([[cf[0], cf[1]] for cf in cold_test_cf], np.int32))
-    
+
     """use pretrain data"""
     if args.use_pretrain:
         pre_path = args.data_path + 'pretrain/{}/mf.npz'.format(args.dataset)
@@ -158,7 +162,7 @@ if __name__ == '__main__':
     # support_cold_set = get_feed_dict_meta(cold_user_dict['train_user_set'])
 
     if args.use_meta_model:
-        model.load_state_dict(torch.load('./model_para/meta_model_{}.ckpt'.format(args.dataset)))
+        model.load_state_dict(torch.load('./model_para/meta_model_{}.ckpt'.format(args.dataset), map_location=device))
     else:
         print("start meta training ...")
         """meta training"""
@@ -215,7 +219,7 @@ if __name__ == '__main__':
 
         train_e_t = time()
         print('meta_training_time: ', train_e_t-train_s_t)
-    
+
 
     """fine tune"""
     # adaption ui_interaction

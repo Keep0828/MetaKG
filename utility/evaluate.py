@@ -11,7 +11,7 @@ cores = multiprocessing.cpu_count() // 2
 
 args = parse_args()
 Ks = eval(args.Ks)
-device = torch.device("cuda:" + str(args.gpu_id)) if args.cuda else torch.device("cpu")
+device = torch.device("cuda:" + str(args.gpu_id)) if args.cuda and torch.cuda.is_available() else torch.device("cpu")
 BATCH_SIZE = args.test_batch_size
 batch_test_flag = args.batch_test_flag
 

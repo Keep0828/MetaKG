@@ -46,9 +46,9 @@ def parse_args():
     user_item_cold, item_cold: True
     user_cold, warm_up: False
     """
-    parser.add_argument('--use_gate', type=int, default=True, help='use gate or not')
-    parser.add_argument('--use_pretrain', type=int, default=True, help='use pretrain data or not')
-    parser.add_argument("--use_meta_model", type=bool, default=True, help="use trained meta model to adapt")
+    parser.add_argument('--use_gate', type=int, default=1, help='use gate or not')
+    parser.add_argument('--use_pretrain', type=int, default=1, help='use pretrain data or not')
+    parser.add_argument("--use_meta_model", type=int, default=1, help="use trained meta model to adapt")
 
     # ===== save model ===== #
     parser.add_argument("--save", type=bool, default=True, help="save model or not")
