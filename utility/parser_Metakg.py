@@ -53,5 +53,10 @@ def parse_args():
     # ===== save model ===== #
     parser.add_argument("--save", type=bool, default=True, help="save model or not")
     parser.add_argument("--out_dir", type=str, default="./model_para/", help="output directory for model")
+    parser.add_argument("--continue_ckpt_dir", type=str, default="./continue_backup_ckpt/", help="continue_backup_ckpt directory for meta learning")
+    parser.add_argument("--continue_train_id", type=int, default=0, help="目前用来作为保存和加载query support set的标识，理论上改变了训练参数就应该有所调整")
+    parser.add_argument("--continue_train_ckpt", type=str, default="", help="这里如果指定为空，则不进行断点续训，从0开始，若指定断点保存的ckpt文件，则从此处开始进行断点续训，需搭配continue_train_id使用。")
+    parser.add_argument("--need_continue_train_step", type=int, default=50, help="这里如果指定为0，则不为断点续训保存ckpt，否则每隔need_continue_train_step步保存一次ckpt。")
+
 
     return parser.parse_args()

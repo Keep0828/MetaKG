@@ -15,6 +15,8 @@ from collections import OrderedDict
 from tqdm import tqdm
 
 import os
+from datetime import datetime
+from utility.zylRecoverCKPT import save_meta_checkpoint, load_meta_checkpoint
 
 torch.autograd.set_detect_anomaly(True)
 
@@ -161,6 +163,9 @@ if __name__ == '__main__':
     support_meta_set = support_meta_set[index]
     query_meta_set = query_meta_set[index]
 
+    np.save(f'{args.continue_ckpt_dir}support_meta_set_{args.dataset}_{args.continue_train_id}.npy', support_meta_set)
+    np.save(f'{args.continue_ckpt_dir}query_meta_set_{args.dataset}_{args.continue_train_id}.npy', query_meta_set)
+
     # support_cold_set = get_feed_dict_meta(cold_user_dict['train_user_set'])
 
     if args.use_meta_model:
@@ -168,16 +173,41 @@ if __name__ == '__main__':
     else:
         print("start meta training ...")
         """meta training"""
-        # meta-training ui_interaction
-        interact_mat = convert_to_sparse_tensor(mean_mat_list)
-        model.interact_mat = interact_mat
-        moving_avg_reward = 0
+        if args.continue_train_ckpt:
+            last_checkpoint = load_meta_checkpoint(args.continue_train_ckpt)
+            if not last_checkpoint:
+                raise ValueError("没有找到合法的Checkpoint，无法断点续传。考虑将args.continue_train置为空以从头训练。")
+            start_iter = last_checkpoint['iter']
+            model_state_dict = last_checkpoint['model_state_dict']
+            optimizer_state_dict = last_checkpoint['optimizer_state_dict']
+            scheduler_state_dict = last_checkpoint['scheduler_state_dict']
+            scheduler_optimizer_state_dict = last_checkpoint['scheduler_optimizer_state_dict']
+            args = last_checkpoint['args']
+            moving_avg_reward = last_checkpoint['moving_avg_reward']
+
+            model.load_state_dict(model_state_dict)
+            optimizer.load_state_dict(optimizer_state_dict)
+            scheduler.load_state_dict(scheduler_state_dict)
+            scheduler_optimizer.load_state_dict(scheduler_optimizer_state_dict)
+
+            # 还要重新加载指定Checkpoint的support_meta_set, query_meta_set
+            support_meta_set = np.load(f'{args.continue_ckpt_dir}support_meta_set_{args.dataset}_{args.continue_train_id}.npy')
+            query_meta_set = np.load(f'{args.continue_ckpt_dir}query_meta_set_{args.dataset}_{args.continue_train_id}.npy')
+            print(f"断点续训（{start_iter}iteration）开始...")
+        else:
+            # meta-training ui_interaction
+            interact_mat = convert_to_sparse_tensor(mean_mat_list)
+            model.interact_mat = interact_mat
+            moving_avg_reward = 0
+            start_iter = 0
+
 
         model.train()
         iter_num = math.floor(len(support_meta_set) / args.batch_size)
         train_s_t = time()
-        for s in tqdm(range(iter_num)):
-            batch_support = torch.LongTensor(support_meta_set[s * args.batch_size:(s + 1) * args.batch_size]).to(device)
+        for s in tqdm(range(start_iter, iter_num)):
+            batch_support = torch.LongTensor(support_meta_set[s * args.batch_size:(s + 1) * args.batch_size]).to(
+                device)
             batch_query = torch.LongTensor(query_meta_set[s * args.batch_size:(s + 1) * args.batch_size]).to(device)
 
             pt = int(s / iter_num * 100)
@@ -214,14 +244,16 @@ if __name__ == '__main__':
             batch_loss.backward()
             optimizer.step()
 
+            if args.need_continue_train_step and s % args.need_continue_train_step == 0 and s != 0:  # and s != 0
+                save_meta_checkpoint(s, model, optimizer, scheduler, scheduler_optimizer, args, moving_avg_reward)
+
             torch.cuda.empty_cache()
 
         if args.save:
             torch.save(model.state_dict(), args.out_dir + 'meta_model_' + args.dataset + '.ckpt')
 
         train_e_t = time()
-        print('meta_training_time: ', train_e_t-train_s_t)
-
+        print('meta_training_time: ', train_e_t - train_s_t)
 
     """fine tune"""
     # adaption ui_interaction
